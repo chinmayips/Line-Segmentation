@@ -91,7 +91,7 @@ def segmentStrips(strips):
 
     final_px = []
     # j is indiv strip no
-    strips_no = len(mid_arr)
+    
 
     for j in range(len(mid_arr)):
         z = []
@@ -102,15 +102,53 @@ def segmentStrips(strips):
         if(len(z)!=0):
             final_px.append(z)
 
-    return image
+    return image , final_px , mid_arr
 
 
+def combineStrips(final_px , mid_arr):
+    strips_no = len(mid_arr)
+    no_of_lines=min([len(x) for x in final_px])
+    #no_of_lines=len(final_px[0])
+    final_lines = []
+    n_img =[ ]
+    print(no_of_lines)
+    (rows,cols)=image.shape
+    j=0
+    #for i in range(0,mid_arr[j][0]):
+    #print(final_px[0][0])
+    prev_final_px=0
 
-image = cv2.imread('images/74D2.jpg')
-im = cv2.imread('images/74D2.jpg')
+    for n_line in range(0,no_of_lines-1):
+        s=0
+        n_img=[]
+        for j in range(1, strips_no-1):
+            if(s+s_width<cols):
+                temp_img = image[prev_final_px:final_px[j][n_line] , s:s+s_width]
+                s = s+s_width
+            else:
+                temp_img = image[prev_final_px:final_px[j][n_line] , s:cols ]
+        
+            if(n_img==[]):
+                n_img=temp_img
+            else:
+                temp=[]
+                for i in range(prev_final_px,final_px[j][n_line]):
+                    if(i<len(n_img) and i<len(temp_img)):
+                        temp.append(np.concatenate((n_img[i] , temp_img[i])))
+                    else:
+                        break
+                n_img=np.array(temp)
+            prev_final_px=final_px[j][n_line]
+
+        nnn_img = np.array(n_img)
+        cv2.imwrite('op/fl.jpg' ,nnn_img)
+
+
+image = cv2.imread('images/99D1.jpg')
+im = cv2.imread('images/99D1.jpg')
 image = preprocessImage(image)
 strips = obtainStrips(image)
 
-image = segmentStrips(strips)
-cv2.imwrite('op/74D2.jpg',image)
+image , final_px , mid_arr = segmentStrips(strips)
+cv2.imwrite('op/99D1.jpg',image)
 
