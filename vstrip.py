@@ -1,33 +1,24 @@
 import cv2
 import numpy as np
-#import image
-imp=[2,3,4,5,6,7,8]
-for im1 in imp:
-    image = cv2.imread('images/'+str(im1)+'.jpg')
-    im = cv2.imread('images/'+str(im1)+'.jpg')
-    #image=cv2.fastNlMeansDenoisingColored(image,None,10,10,7,21)
-    #cv2.imshow('orig',image)
-    #cv2.waitKey(0)
 
-    #grayscale
+#100 is width of strip
+s_width = 100
+s_cnt = 5
+#min gap between two lines
+space_thres  = 10
+#max no of pixel vals in a line to qualify as empty line
+count_thres = 5
+
+def preprocessImage(image):
     gray = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
-
     cv2.fastNlMeansDenoising(gray,gray)
-
-
     #binary
     ret,image = cv2.threshold(gray,128,255,cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)
+    return image
 
-    #cv2.imshow('second',image)
-    #cv2.waitKey(0)
 
-    #image = image.astype('float32')
-    #image = image / 255
 
-    #strips
-    (rows,cols)=image.shape
-    strips=[]
-
+def calcThresholds():
     #200 is width of strip
     s_width = 100
     s_cnt = 5
@@ -35,20 +26,24 @@ for im1 in imp:
     space_thres  = 10
     #max no of pixel vals in a line to qualify as empty line
     count_thres = 5
-    #BLOCK A
+
+
+def obtainStrips(image):
+    (rows,cols)=image.shape
+    strips=[]
     for i in range(0,cols,s_width):
         if(i+s_width<cols): #Not end of the image
             strips.append(image[0:rows,i:i+s_width])
         else: #For the end of the image
             strips.append(image[0:rows,i:cols])
+    return strips
 
 
+
+def segmentStrips(strips):
     gaps_arr = []
-
     count_arr = [] #Array of count_strips
 
-    final_px = [] #Array of arrays to store the row values
-    #BLOCK b
     for simg in strips:
         (rows1,cols1)=simg.shape
         x=[]
@@ -76,12 +71,12 @@ for im1 in imp:
                 x.append(i)      	
         count_arr.append(count_strip)
         gaps_arr.append(x)
+    
 
     mid_arr = []
-
     #gaps_arr and mid_arr are array of arrays 
-    #gaps_arr has the gap of eact strip - gaps of each strip is an array
-    #BLOCK c
+    #gaps_arr has the gap of each strip - gaps of each strip is an array
+ 
     for gfs in gaps_arr:
         y=[]
         for gap_i in range(0,len(gfs)-1):
@@ -94,10 +89,10 @@ for im1 in imp:
     print(gaps_arr[1])
     print(mid_arr[1])
 
-
+    final_px = []
     # j is indiv strip no
     strips_no = len(mid_arr)
-    #BLOCK d
+
     for j in range(len(mid_arr)):
         z = []
         for i in range(len(mid_arr[j])):
@@ -107,49 +102,15 @@ for im1 in imp:
         if(len(z)!=0):
             final_px.append(z)
 
-    cv2.imwrite('op/'+str(im1)+'.jpg',image)
-    no_of_lines=min([len(x) for x in final_px])
-'''
-#no_of_lines=len(final_px[0])
-final_lines = []
-n_img =[ ]
+    return image
 
-print(no_of_lines)
 
-(rows,cols)=image.shape
 
-j=0
-#for i in range(0,mid_arr[j][0]):
-#print(final_px[0][0])
-prev_final_px=0
+image = cv2.imread('images/74D2.jpg')
+im = cv2.imread('images/74D2.jpg')
+image = preprocessImage(image)
+strips = obtainStrips(image)
 
-for n_line in range(0,no_of_lines-1):
-    s=0
-    n_img=[]
-    for j in range(1, strips_no-1):
-        if(s+s_width<cols):
-            temp_img = image[prev_final_px:final_px[j][n_line] , s:s+s_width]
-            s = s+s_width
-        else:
-            temp_img = image[prev_final_px:final_px[j][n_line] , s:cols ]
-       
-        if(n_img==[]):
-            n_img=temp_img
-        else:
-            temp=[]
-            for i in range(prev_final_px,final_px[j][n_line]):
-                if(i<len(n_img) and i<len(temp_img)):
-                    temp.append(np.concatenate((n_img[i] , temp_img[i])))
-                else:
-                    break
-            n_img=np.array(temp)
-        prev_final_px=final_px[j][n_line]
-        #print(n_img)
-        #print('-------------------------------')
-    nnn_img = np.array(n_img)
-    cv2.imwrite('op/fl.jpg' ,nnn_img)
-    if(n_line==0):
-        break
-   ''' 
-
+image = segmentStrips(strips)
+cv2.imwrite('op/74D2.jpg',image)
 
