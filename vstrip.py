@@ -134,89 +134,54 @@ def combineStrips(line_px , medians , image):
         for j in range(len(line_px[l_no])):
             s = j*s_width
             if(s+s_width<cols):
-                temp_img = image[medians[l_no]:line_px[l_no][j] , s:s+s_width]
+                temp_img = image[medians[l_no]:int(line_px[l_no][j]) , s:s+s_width]
             else:
-                temp_img = image[medians[l_no]:line_px[l_no][j]  , s:cols ]
+                temp_img = image[medians[l_no]:int(line_px[l_no][j])  , s:cols ]
             images_in_line.append(temp_img)
         
         images_opened = []
         for a in range(len(images_in_line)):
-            cv2.imwrite('op/line'+ str(l_no) + "_" +str(a)+'.jpg',images_in_line[a])
+            im_a = np.array(images_in_line[a])
+            cv2.imwrite('op/line'+ str(l_no) + "_" +str(a)+'.jpg', im_a)
             images_opened.append(Image.open('op/line'+ str(l_no) + "_" + str(a)+'.jpg'))
 
         widths, heights = zip(*(i.shape for i in images_in_line))
         total_width = sum(widths) 
         max_height = max(heights)
 
-        new_im = Image.new('RGB', (total_width, max_height+10))
+        new_im = Image.new('RGB', (total_width, max_height))
         x_offset = 0
 
         print("Image Line 1" , images_opened[1])
+        strip_cnt = 0
         for im in images_opened:
             np_im = np.array(im)
             nxt_x_offset = x_offset + np_im.shape[1]
-            box = (x_offset, medians[l_no], nxt_x_offset,np_im.shape[0])
+            box = (x_offset, 0 , nxt_x_offset ,np_im.shape[0])
             #box = (x_offset, 0,100 ,90)
             print(np_im.shape , box)
             new_im.paste(im, box)
             x_offset = nxt_x_offset
+            strip_cnt  = strip_cnt+1
         
-        new_im.save('test'+str(l_no)+'.jpg')
+        new_im.save('op/test/'+img_str+'_l'+str(l_no)+'.jpg')
 
 if __name__ == "__main__":
-    image = cv2.imread('images/74D2.jpg')
-    im = cv2.imread('images/74D2.jpg')
+    img_str = "41D3"
+    image = cv2.imread('images/'+img_str+'.jpg')
+    im = cv2.imread('images/'+img_str+'.jpg')
     image = preprocessImage(image)
-    # strips = obtainStrips(image)
-    # final_px , mid_arr = segmentStrips(strips)
+
+    strips = obtainStrips(image)
+    final_px , mid_arr = segmentStrips(strips)
 
     # pickle_out = open("One.pickle","wb")
     # pickle.dump(final_px, pickle_out)
     # pickle_out.close()
-    pickle_in = open("One.pickle","rb")
-    final_px = pickle.load(pickle_in)
+    
+    # pickle_in = open("One.pickle","rb")
+    # final_px = pickle.load(pickle_in)
 
     line_px , medians = GetLinesPxls(final_px)
     combineStrips(line_px , medians , image)
-    cv2.imwrite('op/99D1.jpg',image)
-
-
-
-
-# def combineStrips(final_px , mid_arr):
-#     strips_no = len(mid_arr)
-#     no_of_lines = min([len(x) for x in final_px])
-#     #no_of_lines=len(final_px[0])
-#     final_lines = []
-#     n_img =[ ]
-#     # print(no_of_lines)
-#     (rows,cols)=image.shape
-#     j=0
-#     #for i in range(0,mid_arr[j][0]):
-#     #print(final_px[0][0])
-#     prev_final_px=0
-
-#     for n_line in range(0,no_of_lines-1):
-#         s=0
-#         n_img=[]
-#         for j in range(1, strips_no-1):
-#             if(s+s_width<cols):
-#                 temp_img = image[prev_final_px:final_px[j][n_line] , s:s+s_width]
-#                 s = s+s_width
-#             else:
-#                 temp_img = image[prev_final_px:final_px[j][n_line] , s:cols ]
-        
-#             if(n_img==[]):
-#                 n_img=temp_img
-#             else:
-#                 temp=[]
-#                 for i in range(prev_final_px,final_px[j][n_line]):
-#                     if(i<len(n_img) and i<len(temp_img)):
-#                         temp.append(np.concatenate((n_img[i] , temp_img[i])))
-#                     else:
-#                         break
-#                 n_img=np.array(temp)
-#             prev_final_px=final_px[j][n_line]
-
-#         nnn_img = np.array(n_img)
-#         cv2.imwrite('op/fl.jpg' ,nnn_img)
+    cv2.imwrite('op/'+img_str+'.jpg',image)
