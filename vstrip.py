@@ -21,13 +21,50 @@ def preprocessImage(image):
     return image
 
 
+def calcThresholds(strips):
+    mid=len(strips)//2
+    (rows1,cols1)=strips[mid].shape
+    strip_mid=strips[mid]
+    #print(strip_mid)
+    tot_count_w = 0
+    count_whitepx=[]
+    for i in range(1,rows1-1):
+        count_w = 0
+        for j in range(cols1):
+            vals = strip_mid[i][j]
+            if(vals == 255): #Look for white pixels
+                count_w = count_w +1
+        tot_count_w+=count_w
+        count_whitepx.append(count_w)
+    #max no of pixel vals in a line to qualify as empty line
+    count_thres=tot_count_w//rows1
+    #200 is width of strip
+    s_width = 100
+    seen=False
+    min_space=0
+    min_spaces=[]
 
-def calcThresholds():
-    s_width = 100 #200 is width of strip
-    s_cnt = 5 
-    space_thres  = 10  #min gap between two lines 
-    count_thres = 5 #max no of pixel vals in a line(per strip) to qualify as empty line
+    for i in range(1,rows1-1):
+        if(count_whitepx[i-1]<=count_thres):
+            if(not seen):
+                seen=True
+                min_space=0
+            else:
+                min_space+=1
 
+        else:
+            if(min_space!=0):
+                min_spaces.append(min_space)
+                min_space=0
+                seen=False
+
+    min_spaces.sort()
+    space_thres=min_spaces[round(0.5*len(min_spaces))]//2
+
+    s_cnt = count_thres
+    #min gap between two lines
+    #space_thres  = 10
+    return s_width,space_thres,count_thres
 
 def obtainStrips(image):
     (rows,cols)=image.shape
@@ -98,9 +135,12 @@ def segmentStrips(strips):
     return final_px , mid_arr
 
 
-def GetLinesPxls(final_px): #Cleaning the final_pxls array 
+def GetLinesPxls(final_px , image): #Cleaning the final_pxls array 
+    (rows,cols)=image.shape
     line_px = []
     medians = [0]
+    # for j in final_px:
+    #     print(j)
     max_idx = max([len(x) for x in final_px])
     for indx in range(max_idx):
         new_line = []
@@ -110,19 +150,22 @@ def GetLinesPxls(final_px): #Cleaning the final_pxls array
         med = statistics.median(new_line)
         med = int(med)
         medians.append(med)
-        print(med , len(new_line))
-        for nl in range(len(new_line)-1):
+        # print(med , len(new_line))
+        for nl in range(len(new_line)):
             # if(new_line[nl]>med+50 or new_line[nl]<med-50):
             #     new_line[nl] = 0
             # el
-            if(new_line[nl]>med+30 or new_line[nl]<med-30):
+            if(new_line[nl]>med+10 or new_line[nl]<med-10):
                 if(nl==0): #First Strip 
                     new_line[nl] = new_line[nl+1]
-                elif(nl==len(new_line)-1): #Last Strip
-                    new_line[nl] = med
-                else:
-                    new_line[nl] = (new_line[nl+1]+new_line[nl-1])/2
+                else: #(nl==len(new_line)-1): #Last Strip
+                    new_line[nl] = new_line[nl-1]
+                # else:
+                #     new_line[nl] = (new_line[nl+1]+new_line[nl-1])/2
         line_px.append(new_line)
+    
+    line_px[len(line_px)-1].append(rows-1)
+    line_px[len(line_px)-2].append(rows-1)
 
     #Find avg and sd dev (Median will work best +- A threshold value) for each line and if more over sd dev then remove 
     #And Combine strips even if it is there in only 1 strip, maybe there is only 1 word in that line. 
@@ -130,59 +173,16 @@ def GetLinesPxls(final_px): #Cleaning the final_pxls array
         print(j)
     return line_px , medians
 
-def calcThresholds(strips):
-    mid=len(strips)//2
-    (rows1,cols1)=strips[mid].shape
-    strip_mid=strips[mid]
-    #print(strip_mid)
-    tot_count_w = 0
-    count_whitepx=[]
-    for i in range(1,rows1-1):
-        count_w = 0
-        for j in range(cols1):
-            vals = strip_mid[i][j]
-            if(vals == 255): #Look for white pixels
-                count_w = count_w +1
-        tot_count_w+=count_w
-        count_whitepx.append(count_w)
-    #max no of pixel vals in a line to qualify as empty line
-    count_thres=tot_count_w//rows1
-    #200 is width of strip
-    s_width = 100
-    seen=False
-    min_space=0
-    min_spaces=[]
-
-    for i in range(1,rows1-1):
-        if(count_whitepx[i-1]<=count_thres):
-            if(not seen):
-                seen=True
-                min_space=0
-            else:
-                min_space+=1
-
-        else:
-            if(min_space!=0):
-                min_spaces.append(min_space)
-                min_space=0
-                seen=False
-
-    min_spaces.sort()
-    space_thres=min_spaces[round(0.5*len(min_spaces))]//2
-
-    s_cnt = count_thres
-    #min gap between two lines
-    #space_thres  = 10
-    return s_width,space_thres,count_thres
 
 def combineStrips(line_px , medians , image):
     (rows,cols)=image.shape
-    print(medians)
+    print("Cols is ", cols , rows)
     for l_no in range(len(line_px)):
         images_in_line = []
         prev_start_px = 0 if l_no==0 else int(line_px[l_no-1][j])
         for j in range(len(line_px[l_no])):
             s = j*s_width
+            # print(l_no ,medians[l_no] , int(line_px[l_no][j]) ,  s , s+s_width)
             if(s+s_width<cols):
                 temp_img = image[medians[l_no]:int(line_px[l_no][j]) , s:s+s_width]
             else:
@@ -233,16 +233,17 @@ if __name__ == "__main__":
     im = preprocessImage(im)
     strips = obtainStrips(image)
     s_width,space_thres,count_thres=calcThresholds(strips)
+    print( s_width,space_thres,count_thres)
     final_px , mid_arr = segmentStrips(strips)
 
-    # pickle_out = open("One.pickle","wb")
-    # pickle.dump(final_px, pickle_out)
-    # pickle_out.close()
+    pickle_out = open("One.pickle","wb")
+    pickle.dump(final_px, pickle_out)
+    pickle_out.close()
     
     # pickle_in = open("One.pickle","rb")
     # final_px = pickle.load(pickle_in)
 
-    line_px , medians = GetLinesPxls(final_px)
+    line_px , medians = GetLinesPxls(final_px , image)
 
     for j in range(len(line_px)):
             for i in range(len(line_px[j])):
