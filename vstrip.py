@@ -162,13 +162,14 @@ def GetLinesPxls(final_px , image): #Cleaning the final_pxls array
                     new_line[nl] = new_line[nl-1]
                 # else:
                 #     new_line[nl] = (new_line[nl+1]+new_line[nl-1])/2
+        for nl in range(len(new_line),max_idx):
+            new_line.append(med)
         line_px.append(new_line)
-    
-    line_px[len(line_px)-1].append(rows-1)
-    line_px[len(line_px)-2].append(rows-1)
-
+    new_line = [rows-1]*max_idx
+    line_px.append(new_line)
     #Find avg and sd dev (Median will work best +- A threshold value) for each line and if more over sd dev then remove 
     #And Combine strips even if it is there in only 1 strip, maybe there is only 1 word in that line. 
+    print("Line PXlS is:")
     for j in line_px:
         print(j)
     return line_px , medians
@@ -176,10 +177,9 @@ def GetLinesPxls(final_px , image): #Cleaning the final_pxls array
 
 def combineStrips(line_px , medians , image):
     (rows,cols)=image.shape
-    print("Cols is ", cols , rows)
     for l_no in range(len(line_px)):
         images_in_line = []
-        prev_start_px = 0 if l_no==0 else int(line_px[l_no-1][j])
+        # prev_start_px = 0 if l_no==0 else int(line_px[l_no-1][j])
         for j in range(len(line_px[l_no])):
             s = j*s_width
             # print(l_no ,medians[l_no] , int(line_px[l_no][j]) ,  s , s+s_width)
@@ -195,7 +195,8 @@ def combineStrips(line_px , medians , image):
             # print("Image is " , im_a , images_in_line[a])
             # if(len(im_a)==0):
             #     break
-            if(len(im_a)!=0):
+            if(im_a.size!=0):
+                # print(im_a , len(im_a))
                 cv2.imwrite('op/line'+ str(l_no) + "_" +str(a)+'.jpg', im_a)
                 images_opened.append(Image.open('op/line'+ str(l_no) + "_" + str(a)+'.jpg'))
             else:
@@ -226,22 +227,22 @@ def combineStrips(line_px , medians , image):
             new_im.save('op/test/'+img_str+'_l'+str(l_no)+'.jpg')
 
 if __name__ == "__main__":
-    img_str = "74D2"
+    img_str = sys.argv[1]
     image = cv2.imread('images/'+img_str+'.jpg')
     im = cv2.imread('images/'+img_str+'.jpg')
     image = preprocessImage(image)
     im = preprocessImage(im)
-    strips = obtainStrips(image)
-    s_width,space_thres,count_thres=calcThresholds(strips)
-    print( s_width,space_thres,count_thres)
-    final_px , mid_arr = segmentStrips(strips)
+    # strips = obtainStrips(image)
+    # s_width,space_thres,count_thres=calcThresholds(strips)
+    # print( s_width,space_thres,count_thres)
+    # final_px , mid_arr = segmentStrips(strips)
 
-    pickle_out = open("One.pickle","wb")
-    pickle.dump(final_px, pickle_out)
-    pickle_out.close()
+    # pickle_out = open("One.pickle","wb")
+    # pickle.dump(final_px, pickle_out)
+    # pickle_out.close()
     
-    # pickle_in = open("One.pickle","rb")
-    # final_px = pickle.load(pickle_in)
+    pickle_in = open("One.pickle","rb")
+    final_px = pickle.load(pickle_in)
 
     line_px , medians = GetLinesPxls(final_px , image)
 
@@ -251,5 +252,5 @@ if __name__ == "__main__":
                 cv2.line(im,(s_width*i,l_px),(s_width*(i+1),l_px),(255,0,0),thickness=1)
 
 
-    combineStrips(line_px , medians , im)
+    combineStrips(line_px , medians , image)
     cv2.imwrite('op/'+img_str+'.jpg',im)
