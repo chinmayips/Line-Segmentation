@@ -232,17 +232,17 @@ if __name__ == "__main__":
     im = cv2.imread('images/'+img_str+'.jpg')
     image = preprocessImage(image)
     im = preprocessImage(im)
-    # strips = obtainStrips(image)
-    # s_width,space_thres,count_thres=calcThresholds(strips)
-    # print( s_width,space_thres,count_thres)
-    # final_px , mid_arr = segmentStrips(strips)
+    strips = obtainStrips(image)
+    s_width,space_thres,count_thres=calcThresholds(strips)
+    print( s_width,space_thres,count_thres)
+    final_px , mid_arr = segmentStrips(strips)
 
-    # pickle_out = open("One.pickle","wb")
-    # pickle.dump(final_px, pickle_out)
-    # pickle_out.close()
+    pickle_out = open("One.pickle","wb")
+    pickle.dump(final_px, pickle_out)
+    pickle_out.close()
     
-    pickle_in = open("One.pickle","rb")
-    final_px = pickle.load(pickle_in)
+    # pickle_in = open("One.pickle","rb")
+    # final_px = pickle.load(pickle_in)
 
     line_px , medians = GetLinesPxls(final_px , image)
 
