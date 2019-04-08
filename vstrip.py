@@ -4,6 +4,7 @@ import statistics
 import sys
 from PIL import Image
 import pickle
+import os
 
 #100 is width of strip
 s_width = 100
@@ -132,43 +133,42 @@ def segmentStrips(strips):
                 cv2.line(image,(s_width*j,mid_arr[j][i]),(s_width*(j+1),mid_arr[j][i]),(255,0,0),thickness=1)
         if(len(z)!=0):
             final_px.append(z)
+    cv2.imwrite('op/'+img_str+'mid_arr.jpg',image)
     return final_px , mid_arr
 
 
-def GetLinesPxls(final_px , image): #Cleaning the final_pxls array 
-    (rows,cols)=image.shape
+def GetLinesPxls(final_px , image, strips): #Cleaning the final_pxls array 
+    # (rows,cols)=image.shape
     line_px = []
     medians = [0]
     # for j in final_px:
     #     print(j)
-    max_idx = max([len(x) for x in final_px])
+    print("Length of strips is" , strips , len(strips))
+    max_idx = len(strips) #max([len(x) for x in final_px])
     for indx in range(max_idx):
         new_line = []
         for strip in final_px:
             if(len(strip)>indx): 
                 new_line.append(strip[indx])
-        med = statistics.median(new_line)
-        med = int(med)
-        medians.append(med)
-        # print(med , len(new_line))
-        for nl in range(len(new_line)):
-            # if(new_line[nl]>med+50 or new_line[nl]<med-50):
-            #     new_line[nl] = 0
-            # el
-            if(new_line[nl]>med+10 or new_line[nl]<med-10):
-                if(nl==0): #First Strip 
-                    new_line[nl] = new_line[nl+1]
-                else: #(nl==len(new_line)-1): #Last Strip
-                    new_line[nl] = new_line[nl-1]
-                # else:
-                #     new_line[nl] = (new_line[nl+1]+new_line[nl-1])/2
-        for nl in range(len(new_line),max_idx):
-            new_line.append(med)
-        line_px.append(new_line)
+        if(len(new_line)>0):
+            med = statistics.median(new_line)
+            med = int(med)
+            medians.append(med)
+            # print(med , len(new_line))
+            for nl in range(len(new_line)):
+                if(new_line[nl]>med+space_thres/2 or new_line[nl]<med-space_thres/2):
+                    if(nl==0): #First Strip 
+                        new_line[nl] = med
+                    else: #The prev strip has already been processed next has not avg is wrong
+                        new_line[nl] = new_line[nl-1]
+                    # else:
+                    #     new_line[nl] = (new_line[nl+1]+new_line[nl-1])/2 -  Therefore avg is wrong
+            for nl in range(len(new_line),max_idx):
+                new_line.append(med)
+            line_px.append(new_line)
+    #The last line will have the last row pixels    
     new_line = [rows-1]*max_idx
     line_px.append(new_line)
-    #Find avg and sd dev (Median will work best +- A threshold value) for each line and if more over sd dev then remove 
-    #And Combine strips even if it is there in only 1 strip, maybe there is only 1 word in that line. 
     print("Line PXlS is:")
     for j in line_px:
         print(j)
@@ -176,7 +176,6 @@ def GetLinesPxls(final_px , image): #Cleaning the final_pxls array
 
 
 def combineStrips(line_px , medians , image):
-    (rows,cols)=image.shape
     for l_no in range(len(line_px)):
         images_in_line = []
         # prev_start_px = 0 if l_no==0 else int(line_px[l_no-1][j])
@@ -224,27 +223,32 @@ def combineStrips(line_px , medians , image):
         ni = np.array(new_im)
         print(ni.shape , l_no , total_width , heights)
         if(len(ni.shape)== 3):
-            new_im.save('op/test/'+img_str+'_l'+str(l_no)+'.jpg')
+            new_im.save(path+'/'+img_str+'_l'+str(l_no)+'.jpg')
 
 if __name__ == "__main__":
     img_str = sys.argv[1]
-    image = cv2.imread('images/'+img_str+'.jpg')
-    im = cv2.imread('images/'+img_str+'.jpg')
+    image = cv2.imread('Dataset/Easy_jpg/'+img_str+'.jpg')
+    im = cv2.imread('Dataset/Easy_jpg/'+img_str+'.jpg')
     image = preprocessImage(image)
-    im = preprocessImage(im)
+    (rows,cols)=image.shape
+    # im = preprocessImage(im)
     strips = obtainStrips(image)
     s_width,space_thres,count_thres=calcThresholds(strips)
     print( s_width,space_thres,count_thres)
     final_px , mid_arr = segmentStrips(strips)
 
-    pickle_out = open("One.pickle","wb")
-    pickle.dump(final_px, pickle_out)
-    pickle_out.close()
+    path = "output/"+img_str
+    if not os.path.exists(path):
+        os.mkdir(path)
+
+    # pickle_out = open("One.pickle","wb")
+    # pickle.dump(final_px, pickle_out)
+    # pickle_out.close()
     
     # pickle_in = open("One.pickle","rb")
     # final_px = pickle.load(pickle_in)
 
-    line_px , medians = GetLinesPxls(final_px , image)
+    line_px , medians = GetLinesPxls(final_px , image, strips)
 
     for j in range(len(line_px)):
             for i in range(len(line_px[j])):
@@ -252,5 +256,5 @@ if __name__ == "__main__":
                 cv2.line(im,(s_width*i,l_px),(s_width*(i+1),l_px),(255,0,0),thickness=1)
 
 
-    combineStrips(line_px , medians , image)
-    cv2.imwrite('op/'+img_str+'.jpg',im)
+    combineStrips(line_px , medians , im)
+    # cv2.imwrite('op/'+img_str+'.jpg',im)
